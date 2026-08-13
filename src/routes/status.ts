@@ -4,7 +4,7 @@ import { jobStore } from "../jobStore.js";
 const router = Router();
 
 router.get("/:jobId", (req: Request, res: Response) => {
-  const { jobId } = req.params;
+  const jobId = req.params.jobId as string;
   const job = jobStore.get(jobId);
 
   if (!job) {

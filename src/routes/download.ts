@@ -7,7 +7,7 @@ import { jobStore } from "../jobStore.js";
 const router = Router();
 
 router.get("/:jobId", async (req: Request, res: Response) => {
-  const { jobId } = req.params;
+  const jobId = req.params.jobId as string;
   const job = jobStore.get(jobId);
 
   if (!job) {
@@ -61,7 +61,7 @@ router.get("/:jobId", async (req: Request, res: Response) => {
       console.log(`📦 Download complete for job ${jobId}, cleaning up...`);
       try {
         await fs.rm(job.jobDir, { recursive: true, force: true });
-        jobStore.delete(jobId);
+        jobStore.delete(jobId as string);
         console.log(`🗑️  Cleaned up job ${jobId}`);
       } catch (err) {
         console.error(`Failed to clean up job ${jobId}:`, err);
