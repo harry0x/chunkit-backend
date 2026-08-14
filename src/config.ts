@@ -12,6 +12,22 @@ export const config = {
     ? process.env.CORS_ORIGINS.split(",") 
     : ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
 
+  // JWT
+  jwtSecret: process.env.JWT_SECRET || "chunkit-dev-secret-change-me",
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+
+  // Razorpay
+  razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
+  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || "",
+  razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || "",
+
+  // SMTP / Email
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpPort: parseInt(process.env.SMTP_PORT || "587", 10),
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
+  emailFrom: process.env.EMAIL_FROM || "noreply@chunkit.com",
+
   get maxUploadSizeBytes() {
     return this.maxUploadSizeMB * 1024 * 1024;
   },
