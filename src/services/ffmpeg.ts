@@ -27,6 +27,7 @@ export async function processVideo(jobId: string): Promise<void> {
         "-c:v libx264",
         "-preset ultrafast",
         "-crf 23",
+        "-threads 2", // Limit to 2 CPU cores to prevent overheating
         "-c:a aac",
         `-force_key_frames expr:gte(t,n_forced*${config.chunkDurationSeconds})`,
         "-map 0",
