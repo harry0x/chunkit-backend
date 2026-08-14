@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName     String   @map("full_name")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("user") // 'user' | 'admin'
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  passwordResetOtps PasswordResetOtp[]
+  subscriptions     Subscription[]
+
+  @@map("users")
+}
+
+model PasswordResetOtp {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  otpCode   String   @map("otp_code")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_otps")
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planType    String   @unique @map("plan_type") // 'monthly' | 'yearly'
+  priceInr    Decimal  @map("price_inr") @db.Decimal(10, 2)
+  durationDays Int     @map("duration_days")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  planType          String   @map("plan_type") // 'monthly' | 'yearly'
+  amountPaid        Decimal  @map("amount_paid") @db.Decimal(10, 2)
+  razorpayOrderId   String?  @map("razorpay_order_id")
+  razorpayPaymentId String?  @map("razorpay_payment_id")
+  status            String   @default("active") // 'active' | 'expired' | 'cancelled'
+  startedAt         DateTime @default(now()) @map("started_at") @db.Timestamptz
+  expiresAt         DateTime @map("expires_at") @db.Timestamptz
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
