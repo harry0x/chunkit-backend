@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { config, ALLOWED_MIMETYPES, ALLOWED_EXTENSIONS } from "../config.js";
 import { jobStore } from "../jobStore.js";
 import { processVideo } from "../services/ffmpeg.js";
+import { authenticate } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -52,7 +53,7 @@ const upload = multer({
   },
 });
 
-router.post("/", (req: Request, res: Response) => {
+router.post("/", authenticate, (req: Request, res: Response) => {
   upload.single("video")(req, res, async (err) => {
     if (err) {
       // Handle multer errors

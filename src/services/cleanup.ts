@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { config } from "../config.js";
 import { jobStore } from "../jobStore.js";
+import prisma from "../lib/prisma.js";
 
 export function startCleanupCron(): void {
   const cronExpression = `*/${config.cleanupIntervalMinutes} * * * *`;
@@ -55,4 +56,26 @@ export function startCleanupCron(): void {
   });
 
   console.log(`🧹 Cleanup cron scheduled: every ${config.cleanupIntervalMinutes} minutes`);
+
+  // Daily cron: expire subscriptions where expires_at < now()
+  cron.schedule("0 0 * * *", async () => {
+    console.log("📅 Running daily subscription expiry check...");
+    try {
+      const result = await prisma.subscription.updateMany({
+        where: {
+          status: "active",
+          expiresAt: { lt: new Date() },
+        },
+        data: { status: "expired" },
+      });
+
+      if (result.count > 0) {
+        console.log(`📅 Expired ${result.count} subscription(s)`);
+      }
+    } catch (err) {
+      console.error("Subscription expiry cron error:", err);
+    }
+  });
+
+  console.log("📅 Subscription expiry cron scheduled: daily at midnight");
 }
