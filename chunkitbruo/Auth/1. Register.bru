@@ -1,0 +1,41 @@
+meta {
+  name: 1. Register
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "fullName": "Test User",
+    "email": "{{userEmail}}",
+    "password": "{{userPassword}}",
+    "role":"admin"
+  }
+}
+
+vars:pre-request {
+  userEmail: admin@gmail.com
+  userPassword: 123456
+  baseUrl: http://localhost:3000
+}
+
+script:post-response {
+  if (res.body && res.body.token) {
+    bru.setEnvVar("authToken", res.body.token);
+  }
+  if (res.body && res.body.user && res.body.user.id) {
+    bru.setEnvVar("userId", res.body.user.id);
+  }
+}
+
+tests {
+  test("status is 201 or 200", function() {
+    expect(res.status).to.be.oneOf([200, 201]);
+  });
+}

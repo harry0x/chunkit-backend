@@ -1,0 +1,36 @@
+meta {
+  name: 1. Create Order
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/subscription/create-order
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "planType": "monthly"
+  }
+}
+
+script:post-response {
+  if (res.body && res.body.orderId) {
+    bru.setEnvVar("razorpayOrderId", res.body.orderId);
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("returns an orderId", function() {
+    expect(res.body).to.have.property("orderId");
+  });
+}

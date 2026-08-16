@@ -1,0 +1,33 @@
+meta {
+  name: 6. Update Plan Price
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/api/admin/plans/monthly
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "priceInr": 99
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}
+
+docs {
+  Swap "monthly" in the URL for "yearly" to update the yearly plan price
+  instead. After running this, call "Plans > 1. Get Plans" again to confirm
+  the new price is reflected immediately.
+}

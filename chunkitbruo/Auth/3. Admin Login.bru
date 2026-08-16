@@ -1,0 +1,33 @@
+meta {
+  name: 3. Admin Login
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "admin@example.com",
+    "password": "adminpassword"
+  }
+}
+
+script:post-response {
+  if (res.body && res.body.token) {
+    bru.setEnvVar("adminToken", res.body.token);
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("role is admin", function() {
+    expect(res.body.user.role).to.equal("admin");
+  });
+}

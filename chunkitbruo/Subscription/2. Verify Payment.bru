@@ -1,0 +1,29 @@
+meta {
+  name: 2. Verify Payment
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/subscription/verify-payment
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "razorpay_order_id": "{{razorpayOrderId}}",
+    "razorpay_payment_id": "REPLACE_WITH_TEST_PAYMENT_ID",
+    "razorpay_signature": "REPLACE_WITH_TEST_SIGNATURE"
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

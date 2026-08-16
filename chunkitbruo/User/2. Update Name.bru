@@ -1,0 +1,27 @@
+meta {
+  name: 2. Update Name
+  type: http
+  seq: 2
+}
+
+patch {
+  url: {{baseUrl}}/api/user/profile
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "fullName": "Updated Test User"
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

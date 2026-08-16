@@ -1,0 +1,32 @@
+meta {
+  name: 3. Toggle User Active Status
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/api/admin/users/{{userId}}/status
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "isActive": false
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}
+
+docs {
+  Set isActive to false, then run "2. Login" from the Auth folder again with
+  the same user - it should now be rejected with the account-disabled error.
+}

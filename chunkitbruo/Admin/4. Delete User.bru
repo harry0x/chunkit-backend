@@ -1,0 +1,21 @@
+meta {
+  name: 4. Delete User
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/admin/users/{{userId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("status is 200 or 204", function() {
+    expect(res.status).to.be.oneOf([200, 204]);
+  });
+}

@@ -1,0 +1,24 @@
+meta {
+  name: 5. Verify OTP
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/auth/verify-otp
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{userEmail}}",
+    "otp": "{{otp}}"
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

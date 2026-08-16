@@ -26,5 +26,7 @@ jspm_packages/
 # Mac OS
 .DS_Store
 
+dist/
+
 # Temporary chunks
 /tmp/video-chunker

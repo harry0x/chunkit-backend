@@ -1,0 +1,26 @@
+meta {
+  name: 1. List Users
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/admin/users
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+params:query {
+  page: 1
+  limit: 20
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

@@ -1,0 +1,39 @@
+meta {
+  name: 3. Razorpay Webhook (simulate)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/webhooks/razorpay
+  body: json
+  auth: none
+}
+
+headers {
+  x-razorpay-signature: REPLACE_WITH_WEBHOOK_SIGNATURE
+}
+
+body:json {
+  {
+    "event": "payment.captured",
+    "payload": {
+      "payment": {
+        "entity": {
+          "id": "pay_test123",
+          "order_id": "{{razorpayOrderId}}",
+          "amount": 9900,
+          "status": "captured"
+        }
+      }
+    }
+  }
+}
+
+docs {
+  Note: Real Razorpay webhook calls include a signature header computed with
+  your RAZORPAY_WEBHOOK_SECRET. This request is only useful for testing your
+  endpoint's parsing logic in isolation - for genuine signature validation,
+  trigger a real test-mode payment from Razorpay's dashboard/test cards and
+  let Razorpay call your webhook directly (e.g. via an ngrok tunnel in dev).
+}

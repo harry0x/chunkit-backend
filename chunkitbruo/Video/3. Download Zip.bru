@@ -1,0 +1,27 @@
+meta {
+  name: 3. Download Zip
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/download/{{jobId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+tests {
+  test("status is 200 (or 402/403 if no active subscription)", function() {
+    expect(res.status).to.be.oneOf([200, 402, 403]);
+  });
+}
+
+docs {
+  Expect 402/403 here if the logged-in user has no active subscription -
+  this is the paywall gate described in the spec. Run the Subscription
+  folder requests first to get an active membership, then retry.
+}

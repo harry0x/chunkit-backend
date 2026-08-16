@@ -1,0 +1,21 @@
+meta {
+  name: 1. Get Profile
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/user/profile
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

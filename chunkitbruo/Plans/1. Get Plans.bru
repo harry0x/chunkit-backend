@@ -1,0 +1,17 @@
+meta {
+  name: 1. Get Plans
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/plans
+  body: none
+  auth: none
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

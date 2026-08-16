@@ -1,0 +1,29 @@
+meta {
+  name: 5. List Subscriptions
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/admin/subscriptions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+params:query {
+  planType: 
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}
+
+docs {
+  Optionally set the planType query param to "monthly" or "yearly" to filter.
+}

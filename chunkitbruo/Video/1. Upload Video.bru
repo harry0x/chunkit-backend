@@ -1,0 +1,39 @@
+meta {
+  name: 1. Upload Video
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/upload
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:multipart-form {
+  video: @file(/absolute/path/to/your/test-video.mp4)
+}
+
+script:post-response {
+  if (res.body && res.body.jobId) {
+    bru.setEnvVar("jobId", res.body.jobId);
+  }
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("returns a jobId", function() {
+    expect(res.body).to.have.property("jobId");
+  });
+}
+
+docs {
+  Replace the file path in the body with a real local video file path before
+  running this request - Bruno's @file() reads from your local machine.
+}
