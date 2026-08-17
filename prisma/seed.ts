@@ -27,6 +27,16 @@ async function main() {
     },
   });
 
+  await prisma.subscriptionPlan.upsert({
+    where: { planType: "half-yearly" },
+    update: {},
+    create: {
+      planType: "half-yearly",
+      priceInr: 499.0,
+      durationDays: 180,
+    },
+  });
+
   console.log("✅ Subscription plans seeded (monthly: ₹99, yearly: ₹999)");
 
   // Seed admin user

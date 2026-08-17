@@ -41,6 +41,7 @@ model SubscriptionPlan {
   planType    String   @unique @map("plan_type") // 'monthly' | 'yearly'
   priceInr    Decimal  @map("price_inr") @db.Decimal(10, 2)
   durationDays Int     @map("duration_days")
+  features    Json?    @default("[]")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("subscription_plans")
