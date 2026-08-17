@@ -23,13 +23,18 @@ export async function authenticate(
   next: NextFunction,
 ): Promise<void> {
   const authHeader = req.headers.authorization;
+  
+  let token = "";
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  } else if (req.query.token && typeof req.query.token === "string") {
+    token = req.query.token;
+  }
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!token) {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
-
-  const token = authHeader.split(" ")[1];
 
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as {

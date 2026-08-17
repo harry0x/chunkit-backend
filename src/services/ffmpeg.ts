@@ -27,7 +27,7 @@ export async function processVideo(jobId: string): Promise<void> {
         "-c:v libx264",
         "-preset ultrafast",
         "-crf 23",
-        "-threads 1", // Limit to 1 thread for Render Free Tier (0.1 CPU / 512MB RAM)
+        "-threads 5", // Limit to 1 thread for Render Free Tier (0.1 CPU / 512MB RAM)
         "-c:a aac",
         `-force_key_frames expr:gte(t,n_forced*${config.chunkDurationSeconds})`,
         "-map 0",
