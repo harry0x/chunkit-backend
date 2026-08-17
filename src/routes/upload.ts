@@ -53,7 +53,7 @@ const upload = multer({
   },
 });
 
-router.post("/", authenticate, (req: Request, res: Response) => {
+router.post("/", (req: Request, res: Response) => {
   upload.single("video")(req, res, async (err) => {
     if (err) {
       // Handle multer errors

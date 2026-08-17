@@ -226,26 +226,44 @@ router.patch(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { planType } = req.params;
-      const { priceInr } = req.body;
+      const { priceInr, features } = req.body;
 
       if (!["monthly", "yearly"].includes(planType as string)) {
         res.status(400).json({ error: "planType must be 'monthly' or 'yearly'" });
         return;
       }
 
-      if (typeof priceInr !== "number" || priceInr <= 0) {
-        res.status(400).json({ error: "priceInr must be a positive number" });
+      const data: any = {};
+      if (priceInr !== undefined) {
+        if (typeof priceInr !== "number" || priceInr <= 0) {
+          res.status(400).json({ error: "priceInr must be a positive number" });
+          return;
+        }
+        data.priceInr = priceInr;
+      }
+
+      if (features !== undefined) {
+        if (!Array.isArray(features)) {
+          res.status(400).json({ error: "features must be an array of strings" });
+          return;
+        }
+        data.features = features;
+      }
+
+      if (Object.keys(data).length === 0) {
+        res.status(400).json({ error: "Nothing to update" });
         return;
       }
 
       const updated = await prisma.subscriptionPlan.update({
         where: { planType: planType as string },
-        data: { priceInr },
+        data,
         select: {
           id: true,
           planType: true,
           priceInr: true,
           durationDays: true,
+          features: true,
           updatedAt: true,
         },
       });

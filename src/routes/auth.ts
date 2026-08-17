@@ -9,7 +9,11 @@ import { config } from "../config.js";
 const router = Router();
 
 // Helper: generate JWT
-function generateToken(user: { id: string; email: string; role: string }): string {
+function generateToken(user: {
+  id: string;
+  email: string;
+  role: string;
+}): string {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role },
     config.jwtSecret,
@@ -37,7 +41,9 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
 
     // Validate
     if (!fullName || !email || !password) {
-      res.status(400).json({ error: "fullName, email, and password are required" });
+      res
+        .status(400)
+        .json({ error: "fullName, email, and password are required" });
       return;
     }
 
@@ -156,174 +162,203 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
 });
 
 // ─── POST /api/auth/forgot-password ─────────────────────────────────────────
-router.post("/forgot-password", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      res.status(400).json({ error: "Email is required" });
-      return;
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
-
-    if (!user) {
-      // Don't reveal if user exists — always return success
-      res.json({ message: "If the email exists, an OTP has been sent." });
-      return;
-    }
-
-    // Generate 6-digit OTP
-    const otpCode = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    // Invalidate any existing unused OTPs for this user
-    await prisma.passwordResetOtp.updateMany({
-      where: { userId: user.id, used: false },
-      data: { used: true },
-    });
-
-    // Store OTP
-    await prisma.passwordResetOtp.create({
-      data: {
-        userId: user.id,
-        otpCode,
-        expiresAt,
-      },
-    });
-
-    // Send email
+router.post(
+  "/forgot-password",
+  async (req: Request, res: Response): Promise<void> => {
     try {
-      const transporter = getTransporter();
-      await transporter.sendMail({
-        from: config.emailFrom,
-        to: user.email,
-        subject: "ChunkIt — Password Reset OTP",
-        html: `
+      const { email } = req.body;
+
+      if (!email) {
+        res.status(400).json({ error: "Email is required" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+
+      if (!user) {
+        // Don't reveal if user exists — always return success
+        res.json({ message: "If the email exists, an OTP has been sent." });
+        return;
+      }
+
+      // Check rate limit: max 3 requests per 15 minutes
+      const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+      const recentOtpsCount = await prisma.passwordResetOtp.count({
+        where: {
+          userId: user.id,
+          createdAt: { gte: fifteenMinsAgo },
+        },
+      });
+
+      if (recentOtpsCount >= 3) {
+        res.status(429).json({
+          error: "Too many OTP requests. Please try again after 15 minutes.",
+        });
+        return;
+      }
+
+      // Generate 6-digit OTP
+      const otpCode = crypto.randomInt(100000, 999999).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      // Invalidate any existing unused OTPs for this user
+      await prisma.passwordResetOtp.updateMany({
+        where: { userId: user.id, used: false },
+        data: { used: true },
+      });
+
+      // Store OTP
+      await prisma.passwordResetOtp.create({
+        data: {
+          userId: user.id,
+          otpCode,
+          expiresAt,
+        },
+      });
+
+      // Send email
+      try {
+        const transporter = getTransporter();
+        await transporter.sendMail({
+          from: config.emailFrom,
+          to: user.email,
+          subject: "ChunkIt — Password Reset OTP",
+          html: `
           <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
-            <h2>Password Reset</h2>
-            <p>Your OTP code is:</p>
-            <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 16px; background: #f3f4f6; border-radius: 8px; text-align: center;">
+            <h2 style="color: #0f172a;">Password Reset</h2>
+            <p style="color: #475569; font-size: 16px;">Your OTP code is:</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; padding: 16px; background: #f3f4f6; border-radius: 8px; text-align: center; color: #0f172a;">
               ${otpCode}
             </div>
-            <p style="color: #6b7280; font-size: 14px;">This code expires in 10 minutes.</p>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">This code expires in 10 minutes.</p>
           </div>
         `,
-      });
-    } catch (emailErr) {
-      console.error("Email send error:", emailErr);
-      // Still return success — OTP is stored in DB, user can try again
-    }
+        });
+      } catch (emailErr) {
+        console.error("Email send error:", emailErr);
+        // Still return success — OTP is stored in DB, user can try again
+      }
 
-    res.json({ message: "If the email exists, an OTP has been sent." });
-  } catch (err) {
-    console.error("Forgot password error:", err);
-    res.status(500).json({ error: "Failed to process request" });
-  }
-});
+      res.json({ message: "If the email exists, an OTP has been sent." });
+    } catch (err) {
+      console.error("Forgot password error:", err);
+      res.status(500).json({ error: "Failed to process request" });
+    }
+  },
+);
 
 // ─── POST /api/auth/verify-otp ──────────────────────────────────────────────
-router.post("/verify-otp", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, otp } = req.body;
+router.post(
+  "/verify-otp",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email, otp } = req.body;
 
-    if (!email || !otp) {
-      res.status(400).json({ error: "Email and OTP are required" });
-      return;
+      if (!email || !otp) {
+        res.status(400).json({ error: "Email and OTP are required" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+
+      if (!user) {
+        res.status(400).json({ error: "Invalid OTP" });
+        return;
+      }
+
+      const otpRecord = await prisma.passwordResetOtp.findFirst({
+        where: {
+          userId: user.id,
+          otpCode: otp,
+          used: false,
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (!otpRecord) {
+        res.status(400).json({ error: "Invalid or expired OTP" });
+        return;
+      }
+
+      res.json({ message: "OTP verified successfully", valid: true });
+    } catch (err) {
+      console.error("Verify OTP error:", err);
+      res.status(500).json({ error: "Failed to verify OTP" });
     }
-
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
-
-    if (!user) {
-      res.status(400).json({ error: "Invalid OTP" });
-      return;
-    }
-
-    const otpRecord = await prisma.passwordResetOtp.findFirst({
-      where: {
-        userId: user.id,
-        otpCode: otp,
-        used: false,
-        expiresAt: { gt: new Date() },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (!otpRecord) {
-      res.status(400).json({ error: "Invalid or expired OTP" });
-      return;
-    }
-
-    res.json({ message: "OTP verified successfully", valid: true });
-  } catch (err) {
-    console.error("Verify OTP error:", err);
-    res.status(500).json({ error: "Failed to verify OTP" });
-  }
-});
+  },
+);
 
 // ─── POST /api/auth/reset-password ──────────────────────────────────────────
-router.post("/reset-password", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, otp, newPassword } = req.body;
+router.post(
+  "/reset-password",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email, otp, newPassword } = req.body;
 
-    if (!email || !otp || !newPassword) {
-      res.status(400).json({ error: "Email, OTP, and newPassword are required" });
-      return;
+      if (!email || !otp || !newPassword) {
+        res
+          .status(400)
+          .json({ error: "Email, OTP, and newPassword are required" });
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        res
+          .status(400)
+          .json({ error: "Password must be at least 6 characters" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+
+      if (!user) {
+        res.status(400).json({ error: "Invalid request" });
+        return;
+      }
+
+      // Verify OTP again
+      const otpRecord = await prisma.passwordResetOtp.findFirst({
+        where: {
+          userId: user.id,
+          otpCode: otp,
+          used: false,
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (!otpRecord) {
+        res.status(400).json({ error: "Invalid or expired OTP" });
+        return;
+      }
+
+      // Update password and mark OTP as used
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: user.id },
+          data: { passwordHash },
+        }),
+        prisma.passwordResetOtp.update({
+          where: { id: otpRecord.id },
+          data: { used: true },
+        }),
+      ]);
+
+      res.json({ message: "Password reset successfully" });
+    } catch (err) {
+      console.error("Reset password error:", err);
+      res.status(500).json({ error: "Failed to reset password" });
     }
-
-    if (newPassword.length < 6) {
-      res.status(400).json({ error: "Password must be at least 6 characters" });
-      return;
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
-
-    if (!user) {
-      res.status(400).json({ error: "Invalid request" });
-      return;
-    }
-
-    // Verify OTP again
-    const otpRecord = await prisma.passwordResetOtp.findFirst({
-      where: {
-        userId: user.id,
-        otpCode: otp,
-        used: false,
-        expiresAt: { gt: new Date() },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (!otpRecord) {
-      res.status(400).json({ error: "Invalid or expired OTP" });
-      return;
-    }
-
-    // Update password and mark OTP as used
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash },
-      }),
-      prisma.passwordResetOtp.update({
-        where: { id: otpRecord.id },
-        data: { used: true },
-      }),
-    ]);
-
-    res.json({ message: "Password reset successfully" });
-  } catch (err) {
-    console.error("Reset password error:", err);
-    res.status(500).json({ error: "Failed to reset password" });
-  }
-});
+  },
+);
 
 export default router;

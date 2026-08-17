@@ -14,6 +14,7 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
         planType: true,
         priceInr: true,
         durationDays: true,
+        features: true,
         updatedAt: true,
       },
     });
