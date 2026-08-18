@@ -15,6 +15,7 @@ import adminRouter from "./routes/admin.js";
 import { startCleanupCron } from "./services/cleanup.js";
 
 const app = express();
+app.set("trust proxy", 1); // Fix for Render proxy warning with rate limit
 
 // CORS — allow frontend origin
 app.use(
@@ -75,7 +76,7 @@ async function start() {
   // Start cleanup cron
   startCleanupCron();
 
-  app.listen(config.port, () => {
+  app.listen(config.port, "0.0.0.0", () => {
     console.log(`
   ╔══════════════════════════════════════════╗
   ║     Server started on PORT ${config.port}            ║
