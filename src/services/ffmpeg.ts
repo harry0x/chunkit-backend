@@ -1,11 +1,13 @@
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import ffprobeInstaller from "@ffprobe-installer/ffprobe";
 import path from "path";
 import fs from "fs/promises";
 import { jobStore } from "../jobStore.js";
 import { config } from "../config.js";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
 export async function processVideo(jobId: string): Promise<void> {
   const job = jobStore.get(jobId);
@@ -22,12 +24,26 @@ export async function processVideo(jobId: string): Promise<void> {
   jobStore.update(jobId, { status: "processing", percent: 0 });
 
   return new Promise<void>((resolve, reject) => {
-    ffmpeg(inputPath)
-      .outputOptions([
+    ffmpeg.ffprobe(inputPath, (err, metadata) => {
+      if (err) {
+        return reject(err);
+      }
+
+      const format = metadata.format;
+      let targetBitrate = format.bit_rate;
+      
+      // If bitrate is missing from metadata, estimate it from file size and duration
+      if (!targetBitrate && format.size && format.duration) {
+         targetBitrate = Math.floor((format.size * 8) / format.duration);
+      }
+      
+      // Target 90% of total bitrate for video, assuming 10% audio overhead
+      const videoBitrate = targetBitrate ? Math.floor(Number(targetBitrate) * 0.9) : null;
+
+      const options = [
         "-c:v libx264",
-        "-preset veryfast", // Better compression than ultrafast
-        "-crf 28", // Higher CRF = lower bitrate/smaller file size (23 is default, 28 is noticeably smaller but still decent quality)
-        "-threads 1", // Crucial for Render Free Tier
+        "-preset superfast",
+        "-threads 2", // 2 threads doubles the speed of 1, but keeps RAM usage under Render's 512MB limit
         "-c:a copy", // Copy audio to save memory and avoid codec errors
         `-force_key_frames expr:gte(t,n_forced*${config.chunkDurationSeconds})`,
         "-map 0",
@@ -35,7 +51,20 @@ export async function processVideo(jobId: string): Promise<void> {
         "-f segment",
         "-reset_timestamps 1",
         "-max_muxing_queue_size 1024", // Prevent memory buildup
-      ])
+      ];
+
+      if (videoBitrate) {
+        // EXACT match: Force the output bitrate to exactly match the input file's average bitrate
+        options.push(`-b:v ${videoBitrate}`);
+        options.push(`-maxrate ${videoBitrate}`);
+        options.push(`-bufsize ${videoBitrate * 2}`);
+      } else {
+        // Safe fallback just in case
+        options.push("-crf 26");
+      }
+
+      ffmpeg(inputPath)
+        .outputOptions(options)
       .output(outputPattern)
       .on("progress", (progress) => {
         const percent = Math.min(Math.round(progress.percent ?? 0), 100);
@@ -74,5 +103,6 @@ export async function processVideo(jobId: string): Promise<void> {
         reject(err);
       })
       .run();
+    });
   });
 }
