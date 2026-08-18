@@ -226,10 +226,10 @@ router.patch(
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { planType } = req.params;
-      const { priceInr, features } = req.body;
+      const { priceInr, features, isPopular } = req.body;
 
-      if (!["monthly", "yearly"].includes(planType as string)) {
-        res.status(400).json({ error: "planType must be 'monthly' or 'yearly'" });
+      if (!["monthly", "half-yearly", "yearly"].includes(planType as string)) {
+        res.status(400).json({ error: "Invalid planType" });
         return;
       }
 
@@ -250,6 +250,22 @@ router.patch(
         data.features = features;
       }
 
+      if (isPopular !== undefined) {
+        if (typeof isPopular !== "boolean") {
+          res.status(400).json({ error: "isPopular must be a boolean" });
+          return;
+        }
+        data.isPopular = isPopular;
+
+        // If making this plan popular, optionally make all others not popular
+        if (isPopular) {
+          await prisma.subscriptionPlan.updateMany({
+            where: { planType: { not: planType } },
+            data: { isPopular: false }
+          });
+        }
+      }
+
       if (Object.keys(data).length === 0) {
         res.status(400).json({ error: "Nothing to update" });
         return;
@@ -264,11 +280,12 @@ router.patch(
           priceInr: true,
           durationDays: true,
           features: true,
+          isPopular: true,
           updatedAt: true,
         },
       });
 
-      console.log(`💰 Admin updated ${planType} plan price to ₹${priceInr}`);
+      console.log(`💰 Admin updated ${planType} plan`);
 
       res.json({ plan: updated });
     } catch (err) {

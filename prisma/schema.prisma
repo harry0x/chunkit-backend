@@ -42,6 +42,7 @@ model SubscriptionPlan {
   priceInr    Decimal  @map("price_inr") @db.Decimal(10, 2)
   durationDays Int     @map("duration_days")
   features    Json?    @default("[]")
+  isPopular   Boolean  @default(false) @map("is_popular")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("subscription_plans")

@@ -23,8 +23,8 @@ router.post(
     try {
       const { planType } = req.body;
 
-      if (!planType || !["monthly", "yearly"].includes(planType)) {
-        res.status(400).json({ error: "planType must be 'monthly' or 'yearly'" });
+      if (!planType || !["monthly", "half-yearly", "yearly"].includes(planType)) {
+        res.status(400).json({ error: "Invalid planType" });
         return;
       }
 
