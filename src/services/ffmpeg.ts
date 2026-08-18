@@ -24,12 +24,7 @@ export async function processVideo(jobId: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     ffmpeg(inputPath)
       .outputOptions([
-        "-c:v libx264",
-        "-preset ultrafast",
-        "-crf 23",
-        "-threads 1", // Limit to 1 thread for Render Free Tier (0.1 CPU / 512MB RAM)
-        "-c:a aac",
-        `-force_key_frames expr:gte(t,n_forced*${config.chunkDurationSeconds})`,
+        "-c copy", // Zero quality loss & uses almost zero RAM/CPU (perfect for Render Free Tier)
         "-map 0",
         `-segment_time ${config.chunkDurationSeconds}`,
         "-f segment",
@@ -63,8 +58,9 @@ export async function processVideo(jobId: string): Promise<void> {
           reject(err);
         }
       })
-      .on("error", (err) => {
+      .on("error", (err, stdout, stderr) => {
         console.error(`❌ Job ${jobId} FFmpeg error:`, err.message);
+        if (stderr) console.error("FFmpeg stderr:", stderr);
         jobStore.update(jobId, {
           status: "failed",
           error: err.message || "FFmpeg processing failed",
