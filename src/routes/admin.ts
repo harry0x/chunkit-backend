@@ -260,7 +260,7 @@ router.patch(
         // If making this plan popular, optionally make all others not popular
         if (isPopular) {
           await prisma.subscriptionPlan.updateMany({
-            where: { planType: { not: planType } },
+            where: { planType: { not: planType as string } },
             data: { isPopular: false }
           });
         }
