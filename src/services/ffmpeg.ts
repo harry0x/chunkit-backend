@@ -24,11 +24,17 @@ export async function processVideo(jobId: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     ffmpeg(inputPath)
       .outputOptions([
-        "-c copy", // Zero quality loss & uses almost zero RAM/CPU (perfect for Render Free Tier)
+        "-c:v libx264",
+        "-preset veryfast", // Better compression than ultrafast
+        "-crf 28", // Higher CRF = lower bitrate/smaller file size (23 is default, 28 is noticeably smaller but still decent quality)
+        "-threads 1", // Crucial for Render Free Tier
+        "-c:a copy", // Copy audio to save memory and avoid codec errors
+        `-force_key_frames expr:gte(t,n_forced*${config.chunkDurationSeconds})`,
         "-map 0",
         `-segment_time ${config.chunkDurationSeconds}`,
         "-f segment",
         "-reset_timestamps 1",
+        "-max_muxing_queue_size 1024", // Prevent memory buildup
       ])
       .output(outputPattern)
       .on("progress", (progress) => {
