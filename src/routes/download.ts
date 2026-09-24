@@ -8,7 +8,7 @@ import { requireActiveSubscription } from "../middleware/subscription.js";
 
 const router = Router();
 
-router.get("/:jobId", authenticate, requireActiveSubscription, async (req: Request, res: Response) => {
+router.get("/:jobId", async (req: Request, res: Response) => {
   const jobId = req.params.jobId as string;
   const job = jobStore.get(jobId);
 
